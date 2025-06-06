@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🛠️  Memulai setup CYSIC Verifier otomatis..."
+echo "🛠️  Memulai setup CYSIC Verifier otomatis dengan Docker..."
 
 ### 1. Install Docker jika belum terpasang
 if ! command -v docker &> /dev/null; then
@@ -10,7 +10,7 @@ if ! command -v docker &> /dev/null; then
   curl -fsSL https://get.docker.com -o get-docker.sh
   sh get-docker.sh
   sudo usermod -aG docker $USER
-  echo "✅ Docker terpasang. Silakan logout-login ulang agar grup Docker aktif."
+  echo "✅ Docker terpasang. Silakan logout dan login ulang agar grup Docker aktif."
 else
   echo "✅ Docker sudah tersedia."
 fi
@@ -25,10 +25,9 @@ else
   echo "✅ Docker Compose sudah tersedia."
 fi
 
-### 3. Siapkan direktori
+### 3. Siapkan direktori project
 INSTALL_DIR=~/cysic-verifier
-mkdir -p "$INSTALL_DIR/data"
-mkdir -p "$INSTALL_DIR/keys"    # <- direktori untuk simpan .key dari container
+mkdir -p "$INSTALL_DIR/keys"
 cd "$INSTALL_DIR"
 
 ### 4. Minta input wallet
@@ -56,6 +55,8 @@ RUN apt-get update && \
 WORKDIR /root
 
 ARG REWARD_ADDRESS
+ENV REWARD_ADDRESS=${REWARD_ADDRESS}
+
 CMD bash /root/setup_linux.sh ${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
 EOF
 
@@ -73,8 +74,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./data:/root/cysic-verifier
-      - ./keys:/root/.cysic/keys       # <- Mount keys folder dari container ke host
+      - ./keys:/root/.cysic/keys       # ✅ Mount untuk menyimpan file .key
     restart: unless-stopped
     env_file:
       - .env
