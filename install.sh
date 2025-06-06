@@ -28,6 +28,7 @@ fi
 ### 3. Siapkan direktori
 INSTALL_DIR=~/cysic-verifier
 mkdir -p "$INSTALL_DIR/data"
+mkdir -p "$INSTALL_DIR/keys"    # <- direktori untuk simpan .key dari container
 cd "$INSTALL_DIR"
 
 ### 4. Minta input wallet
@@ -73,6 +74,7 @@ services:
     tty: true
     volumes:
       - ./data:/root/cysic-verifier
+      - ./keys:/root/.cysic/keys       # <- Mount keys folder dari container ke host
     restart: unless-stopped
     env_file:
       - .env
