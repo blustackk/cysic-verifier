@@ -27,7 +27,7 @@ fi
 
 ### 3. Siapkan direktori project
 INSTALL_DIR=~/cysic-verifier
-mkdir -p "$INSTALL_DIR/keys"
+mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 ### 4. Minta input wallet
@@ -73,8 +73,6 @@ services:
     container_name: cysic-verifier
     stdin_open: true
     tty: true
-    volumes:
-      - ./keys:/root/.cysic/keys       # ✅ Mount untuk menyimpan file .key
     restart: unless-stopped
     env_file:
       - .env
@@ -102,4 +100,3 @@ docker logs -f cysic-verifier
 
 ### 10. Hapus script setelah selesai
 rm -- "${BASH_SOURCE[0]}"
-
