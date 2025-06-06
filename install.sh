@@ -101,4 +101,5 @@ sleep 2
 docker logs -f cysic-verifier
 
 ### 10. Hapus script setelah selesai
-rm -- "$0"
+rm -- "${BASH_SOURCE[0]}"
+
