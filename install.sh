@@ -2,6 +2,10 @@
 
 set -e
 
+echo "🧹 Menghapus folder dan file lama (jika ada)..."
+rm -rf ~/cysic-verifier
+rm -f ~/install.sh install.sh.* 2>/dev/null || true
+
 echo "🛠️  Memulai setup CYSIC Verifier otomatis dengan Docker..."
 
 ### 1. Install Docker jika belum terpasang
@@ -30,17 +34,14 @@ INSTALL_DIR=~/cysic-verifier
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-### 4. Minta input wallet
-echo ""
+### 4. Input alamat wallet
 read -p "🔑 Masukkan alamat wallet (0x...): " WALLET
 
-# Validasi alamat Ethereum sederhana
 if [[ ! $WALLET =~ ^0x[a-fA-F0-9]{40}$ ]]; then
-  echo "❌ Alamat wallet tidak valid. Pastikan dalam format Ethereum (0x...)"
+  echo "❌ Alamat wallet tidak valid. Format harus 0x..."
   exit 1
 fi
 
-# Simpan ke file .env
 echo "REWARD_ADDRESS=$WALLET" > .env
 
 ### 5. Buat Dockerfile
@@ -60,7 +61,7 @@ ENV REWARD_ADDRESS=${REWARD_ADDRESS}
 CMD bash /root/setup_linux.sh ${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
 EOF
 
-### 6. Buat docker-compose.yml
+### 6. Buat docker-compose.yml tanpa volume .key
 cat <<'EOF' > docker-compose.yml
 version: '3.8'
 
@@ -80,23 +81,19 @@ EOF
 
 ### 7. Hentikan container lama jika ada
 if docker ps -a --format '{{.Names}}' | grep -q '^cysic-verifier$'; then
-  echo "🧹 Menghentikan dan menghapus container lama..."
+  echo "🧹 Menghapus container lama..."
   docker-compose down
 fi
 
-### 8. Build & run
-echo ""
+### 8. Build dan Jalankan
 echo "🔨 Membuild Docker image..."
 docker-compose build
 
-echo "🚀 Menjalankan container..."
+echo "🚀 Menjalankan CYSIC Verifier..."
 docker-compose up -d
 
-### 9. Tampilkan log
+### 9. Tampilkan log container
 echo ""
-echo "📡 Menampilkan log dari verifier (Ctrl+C untuk keluar):"
+echo "📡 Menampilkan log verifier (Ctrl+C untuk keluar):"
 sleep 2
 docker logs -f cysic-verifier
-
-### 10. Hapus script setelah selesai
-rm -- "${BASH_SOURCE[0]}"
