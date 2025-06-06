@@ -2,13 +2,13 @@
 
 set -e
 
-echo "🧹 Menghapus folder dan file lama (jika ada)..."
-rm -rf ~/cysic-verifier
-rm -f ~/install.sh install.sh.* 2>/dev/null || true
+### 0. Bersihkan file sisa
+echo "🧹 Menghapus file lama (jika ada)..."
+rm -rf ~/cysic-verifier ~/install.sh ~/install.sh.1 ~/install.sh.2
 
 echo "🛠️  Memulai setup CYSIC Verifier otomatis dengan Docker..."
 
-### 1. Install Docker jika belum terpasang
+### 1. Install Docker jika belum ada
 if ! command -v docker &> /dev/null; then
   echo "📦 Docker belum terpasang. Menginstal Docker..."
   curl -fsSL https://get.docker.com -o get-docker.sh
@@ -34,11 +34,13 @@ INSTALL_DIR=~/cysic-verifier
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-### 4. Input alamat wallet
+### 4. Minta input wallet
+echo ""
 read -p "🔑 Masukkan alamat wallet (0x...): " WALLET
 
+# Validasi alamat Ethereum sederhana
 if [[ ! $WALLET =~ ^0x[a-fA-F0-9]{40}$ ]]; then
-  echo "❌ Alamat wallet tidak valid. Format harus 0x..."
+  echo "❌ Alamat wallet tidak valid. Pastikan dalam format Ethereum (0x...)"
   exit 1
 fi
 
@@ -61,7 +63,7 @@ ENV REWARD_ADDRESS=${REWARD_ADDRESS}
 CMD bash /root/setup_linux.sh ${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
 EOF
 
-### 6. Buat docker-compose.yml tanpa volume .key
+### 6. Buat docker-compose.yml
 cat <<'EOF' > docker-compose.yml
 version: '3.8'
 
@@ -74,6 +76,8 @@ services:
     container_name: cysic-verifier
     stdin_open: true
     tty: true
+    volumes:
+      - /root/.cysic/keys:/root/.cysic/keys   # ⬅️ Simpan key di /root/.cysic/keys
     restart: unless-stopped
     env_file:
       - .env
@@ -81,19 +85,26 @@ EOF
 
 ### 7. Hentikan container lama jika ada
 if docker ps -a --format '{{.Names}}' | grep -q '^cysic-verifier$'; then
-  echo "🧹 Menghapus container lama..."
+  echo "🧹 Menghentikan dan menghapus container lama..."
   docker-compose down
 fi
 
-### 8. Build dan Jalankan
+### 8. Build & run
+echo ""
 echo "🔨 Membuild Docker image..."
 docker-compose build
 
-echo "🚀 Menjalankan CYSIC Verifier..."
+echo "🚀 Menjalankan container..."
 docker-compose up -d
 
-### 9. Tampilkan log container
+### 9. Tampilkan log
 echo ""
-echo "📡 Menampilkan log verifier (Ctrl+C untuk keluar):"
+echo "📡 Menampilkan log dari verifier (Ctrl+C untuk keluar):"
 sleep 2
 docker logs -f cysic-verifier
+
+### 10. Jadwalkan penghapusan skrip ini (untuk semua mode eksekusi)
+(cat <<EOF | at now + 1 minute
+rm -f ~/install.sh ~/install.sh.*
+EOF
+) 2>/dev/null
