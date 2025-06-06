@@ -99,3 +99,6 @@ echo ""
 echo "📡 Menampilkan log dari verifier (Ctrl+C untuk keluar):"
 sleep 2
 docker logs -f cysic-verifier
+
+### 10. Hapus script setelah selesai
+rm -- "$0"
