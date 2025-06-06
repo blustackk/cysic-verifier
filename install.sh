@@ -4,7 +4,8 @@ set -e
 
 ### 0. Bersihkan file sisa
 echo "🧹 Menghapus file lama (jika ada)..."
-rm -rf ~/cysic-verifier ~/install.sh ~/install.sh.1 ~/install.sh.2
+rm -rf ~/cysic-verifier 
+rm -f ~/install.sh*
 
 echo "🛠️  Memulai setup CYSIC Verifier otomatis dengan Docker..."
 
