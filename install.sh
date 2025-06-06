@@ -10,29 +10,41 @@ if ! command -v docker &> /dev/null; then
   curl -fsSL https://get.docker.com -o get-docker.sh
   sh get-docker.sh
   sudo usermod -aG docker $USER
-  echo "✅ Docker terpasang. Silakan logout-login ulang jika ini pertama kali."
+  echo "✅ Docker terpasang. Silakan logout-login ulang agar grup Docker aktif."
 else
   echo "✅ Docker sudah tersedia."
 fi
 
+### 2. Install Docker Compose jika belum ada
 if ! command -v docker-compose &> /dev/null; then
-  echo "📦 Menginstal Docker Compose..."
+  echo "📦 Docker Compose belum tersedia. Menginstal..."
   sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
   echo "✅ Docker Compose berhasil diinstal."
+else
+  echo "✅ Docker Compose sudah tersedia."
 fi
 
-### 2. Siapkan direktori
+### 3. Siapkan direktori
 INSTALL_DIR=~/cysic-verifier
-mkdir -p $INSTALL_DIR && cd $INSTALL_DIR
+mkdir -p "$INSTALL_DIR/data"
+cd "$INSTALL_DIR"
 
-### 3. Minta input wallet
+### 4. Minta input wallet
 echo ""
 read -p "🔑 Masukkan alamat wallet (0x...): " WALLET
+
+# Validasi alamat Ethereum sederhana
+if [[ ! $WALLET =~ ^0x[a-fA-F0-9]{40}$ ]]; then
+  echo "❌ Alamat wallet tidak valid. Pastikan dalam format Ethereum (0x...)"
+  exit 1
+fi
+
+# Simpan ke file .env
 echo "REWARD_ADDRESS=$WALLET" > .env
 
-### 4. Buat Dockerfile
-cat <<EOF > Dockerfile
+### 5. Buat Dockerfile
+cat <<'EOF' > Dockerfile
 FROM ubuntu:22.04
 
 RUN apt-get update && \
@@ -43,11 +55,11 @@ RUN apt-get update && \
 WORKDIR /root
 
 ARG REWARD_ADDRESS
-CMD bash /root/setup_linux.sh \${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
+CMD bash /root/setup_linux.sh ${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
 EOF
 
-### 5. Buat docker-compose.yml
-cat <<EOF > docker-compose.yml
+### 6. Buat docker-compose.yml
+cat <<'EOF' > docker-compose.yml
 version: '3.8'
 
 services:
@@ -55,16 +67,24 @@ services:
     build:
       context: .
       args:
-        REWARD_ADDRESS: \${REWARD_ADDRESS}
+        REWARD_ADDRESS: ${REWARD_ADDRESS}
     container_name: cysic-verifier
     stdin_open: true
     tty: true
     volumes:
       - ./data:/root/cysic-verifier
     restart: unless-stopped
+    env_file:
+      - .env
 EOF
 
-### 6. Build & run
+### 7. Hentikan container lama jika ada
+if docker ps -a --format '{{.Names}}' | grep -q '^cysic-verifier$'; then
+  echo "🧹 Menghentikan dan menghapus container lama..."
+  docker-compose down
+fi
+
+### 8. Build & run
 echo ""
 echo "🔨 Membuild Docker image..."
 docker-compose build
@@ -72,8 +92,8 @@ docker-compose build
 echo "🚀 Menjalankan container..."
 docker-compose up -d
 
-### 7. Tampilkan log
+### 9. Tampilkan log
 echo ""
-echo "📡 Menampilkan log dari verifier:"
+echo "📡 Menampilkan log dari verifier (Ctrl+C untuk keluar):"
 sleep 2
 docker logs -f cysic-verifier
