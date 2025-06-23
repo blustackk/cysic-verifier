@@ -12,7 +12,7 @@ ______ _     _   _ _____ _____ ___  _____  _   __
 | |_/ / |___| |_| /\__/ / | || | | | \__/\| |\  \
 \____/\_____/\___/\____/  \_/\_| |_/\____/\_| \_/
                                                  
-                                                                                                                
+                                                                                                                 
 EOF
 
 ### 0. Hapus file dan folder lama
@@ -32,8 +32,8 @@ else
   echo "✅ Docker sudah tersedia."
 fi
 
-### 2. Pastikan Docker Compose terinstal
-if ! command -v docker-compose &> /dev/null; then
+### 2. Pastikan Docker Compose tersedia
+if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
   echo "📦 Menginstal Docker Compose..."
   sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
@@ -57,7 +57,10 @@ fi
 
 echo "REWARD_ADDRESS=$WALLET" > .env
 
-### 5. Buat Dockerfile
+### 5. Pastikan folder key wallet tersedia
+mkdir -p /root/.cysic/keys
+
+### 6. Buat Dockerfile
 cat <<'EOF' > Dockerfile
 FROM ubuntu:22.04
 
@@ -71,10 +74,10 @@ WORKDIR /root
 ARG REWARD_ADDRESS
 ENV REWARD_ADDRESS=${REWARD_ADDRESS}
 
-CMD bash /root/setup_linux.sh ${REWARD_ADDRESS} && cd /root/cysic-verifier && bash start.sh
+CMD bash -c "bash /root/setup_linux.sh \$REWARD_ADDRESS && cd /root/cysic-verifier && exec bash start.sh"
 EOF
 
-### 6. Buat docker-compose.yml
+### 7. Buat docker-compose.yml
 cat <<'EOF' > docker-compose.yml
 version: '3.8'
 
@@ -88,29 +91,29 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - /root/.cysic/keys:/root/.cysic/keys     # Pakai folder yang benar
+      - /root/.cysic/keys:/root/.cysic/keys
     restart: unless-stopped
     env_file:
       - .env
 EOF
 
-### 7. Stop container lama jika ada
+### 8. Stop container lama jika ada
 if docker ps -a --format '{{.Names}}' | grep -q '^cysic-verifier$'; then
   echo "🧹 Menghapus container lama..."
-  docker-compose down
+  docker compose down || docker-compose down
 fi
 
-### 8. Build & run
+### 9. Build & run
 echo "🔨 Membuild Docker image..."
-docker-compose build
+docker compose build || docker-compose build
 
 echo "🚀 Menjalankan container..."
-docker-compose up -d
+docker compose up -d || docker-compose up -d
 
-### 9. Tampilkan log
+### 10. Tampilkan log
 sleep 2
 echo "📡 Menampilkan log (Ctrl+C untuk keluar):"
 docker logs -f cysic-verifier
 
-### 10. Hapus skrip ini sendiri
+### 11. Hapus skrip ini sendiri
 rm -- "$0"
